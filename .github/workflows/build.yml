@@ -46,6 +46,7 @@ jobs:
             --include-module=util `
             --enable-plugin=anti-bloat `
             --lto=yes `
+            --assume-yes-for-downloads `
             TPM.py
 
       - name: Upload Build Artifacts
