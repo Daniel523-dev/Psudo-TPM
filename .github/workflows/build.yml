@@ -1,0 +1,83 @@
+name: Build Encryption and TPM (Windows)
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build Encryption and TPM
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install nuitka pyinstaller cryptography pywin32 zstandard argon2-cffi
+
+      - name: Compile Encryption.py
+        shell: pwsh
+        run: |
+          python -m nuitka `
+            --module `
+            --output-dir=dist `
+            Encryption.py
+
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Package TPM.py with PyInstaller
+        shell: pwsh
+        run: |
+          $encryptionPyd = Get-ChildItem -Path dist -Filter "Encryption*.pyd" |
+            Select-Object -First 1
+
+          if (-not $encryptionPyd) {
+            throw "Compiled Encryption.pyd was not found in dist."
+          }
+
+          $arguments = @(
+            "--clean",
+            "--noconfirm",
+            "--onefile",
+            "--name", "TPM",
+            "--paths", ".",
+            "--add-binary", "$($encryptionPyd.FullName);.",
+            "--collect-all", "cryptography",
+            "--hidden-import", "util",
+            "--hidden-import", "win32file",
+            "--hidden-import", "win32pipe",
+            "--hidden-import", "pywintypes",
+            "--hidden-import", "zstandard",
+            "--hidden-import", "argon2",
+            "--distpath", "dist",
+            "--workpath", "build",
+            "--specpath", "build",
+            "TPM.py"
+          )
+
+          python -m PyInstaller @arguments
+
+          if ($LASTEXITCODE -ne 0) {
+            exit $LASTEXITCODE
+          }
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: TPM-windows-binaries
+          path: |
+            dist/TPM.exe
+            dist/Encryption*.pyd
+          if-no-files-found: error
