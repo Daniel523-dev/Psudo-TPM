@@ -40,10 +40,16 @@ jobs:
       - name: Package TPM.py with PyInstaller
         shell: pwsh
         run: |
-          # 1. Delete the source file so PyInstaller is forced to use the Nuitka .pyd
+          # Delete source to force PyInstaller to use the Nuitka .pyd
           Remove-Item Encryption.py -Force
 
-          # 2. Add 'dist' to paths so PyInstaller automatically finds the .pyd extension
+          $encryptionPyd = Get-ChildItem -Path dist -Filter "Encryption*.pyd" |
+            Select-Object -First 1
+
+          if (-not $encryptionPyd) {
+            throw "Compiled Encryption.pyd was not found in dist."
+          }
+
           $arguments = @(
             "--clean",
             "--noconfirm",
@@ -51,6 +57,7 @@ jobs:
             "--name", "TPM",
             "--paths", ".",
             "--paths", "dist",
+            "--add-binary", "$($encryptionPyd.FullName);.",
             "--collect-all", "cryptography",
             "--hidden-import", "util",
             "--hidden-import", "win32file",
