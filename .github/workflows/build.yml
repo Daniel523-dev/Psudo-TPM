@@ -81,6 +81,5 @@ jobs:
         with:
           name: TPM-windows-binaries
           path: |
-            dist/TPM.exe
-            dist/Encryption*.pyd
+            dist
           if-no-files-found: error
