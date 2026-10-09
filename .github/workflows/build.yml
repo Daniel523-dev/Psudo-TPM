@@ -8,7 +8,7 @@ on:
 
 jobs:
   build:
-    name: Build Encryption and TPM
+    name: Build TPM Windows Binary
     runs-on: windows-latest
 
     steps:
@@ -20,61 +20,33 @@ jobs:
         with:
           python-version: "3.14"
 
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
-          python -m pip install nuitka pyinstaller cryptography pywin32 zstandard argon2-cffi numpy psutil pyyaml bcrypt
+          python -m pip install nuitka
+          python -m pip install cryptography argon2-cffi pywin32 zstandard numpy psutil pyyaml bcrypt
 
-      - name: Compile Encryption.py
+      - name: Build modules and executable (Windows)
         shell: pwsh
         run: |
+          # 1. Build Encryption as an independent module
           python -m nuitka `
             --module `
             --output-dir=dist `
             Encryption.py
 
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
-
-      - name: Package TPM.py with PyInstaller
-        shell: pwsh
-        run: |
-          # Delete source to force PyInstaller to use the Nuitka .pyd
-          Remove-Item Encryption.py -Force
-
-          $encryptionPyd = Get-ChildItem -Path dist -Filter "Encryption*.pyd" |
-            Select-Object -First 1
-
-          if (-not $encryptionPyd) {
-            throw "Compiled Encryption.pyd was not found in dist."
-          }
-
-          $arguments = @(
-            "--clean",
-            "--noconfirm",
-            "--name", "TPM",
-            "--paths", ".",
-            "--paths", "dist",
-            "--add-binary", "$($encryptionPyd.FullName);.",
-            "--collect-all", "cryptography",
-            "--hidden-import", "util",
-            "--hidden-import", "win32file",
-            "--hidden-import", "win32pipe",
-            "--hidden-import", "pywintypes",
-            "--collect-all", "zstandard",
-            "--hidden-import", "argon2",
-            "--distpath", "dist",
-            "--workpath", "build",
-            "--specpath", "build",
-            "TPM.py"
-          )
-
-          python -m PyInstaller @arguments
-
-          if ($LASTEXITCODE -ne 0) {
-            exit $LASTEXITCODE
-          }
+          # 2. Build TPM as a standalone executable with Nuitka
+          python -m nuitka `
+            --standalone `
+            --onefile `
+            --output-dir=dist `
+            --include-module=Encryption `
+            --include-module=util `
+            --include-plugin-enable=anti-bloat `
+            --lto=yes `
+            TPM.py
 
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
