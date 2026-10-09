@@ -50,11 +50,13 @@ class TPMClient:
         self.pipe_name = pipe_name
     def _connect(self):
         if os.name == "nt":
+            start=time.monotonic()
             while True:
                 try:return win32file.CreateFile(self.pipe_name, win32file.GENERIC_READ | win32file.GENERIC_WRITE,0, None, win32file.OPEN_EXISTING, 0, None)
                 except pywintypes.error as e:
                     if e.winerror not in (2, 231):raise
                     time.sleep(0.05)
+                if time.monotonic()-start>5:raise ConnectionError("Couldn't connect to TPM.exe")
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         s.connect(str(self.sock_path))
         return s
