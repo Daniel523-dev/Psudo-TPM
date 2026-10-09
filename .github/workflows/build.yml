@@ -44,7 +44,7 @@ jobs:
             --output-dir=dist `
             --include-module=Encryption `
             --include-module=util `
-            --include-plugin-enable=anti-bloat `
+            --enable-plugin=anti-bloat `
             --lto=yes `
             TPM.py
 
