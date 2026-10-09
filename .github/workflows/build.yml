@@ -23,7 +23,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install nuitka pyinstaller cryptography pywin32 zstandard argon2-cffi
+          python -m pip install nuitka pyinstaller cryptography pywin32 zstandard argon2-cffi numpy psutil pyyaml bcrypt
 
       - name: Compile Encryption.py
         shell: pwsh
@@ -62,7 +62,7 @@ jobs:
             "--hidden-import", "win32file",
             "--hidden-import", "win32pipe",
             "--hidden-import", "pywintypes",
-            "--hidden-import", "zstandard",
+            "--collect-all", "zstandard",
             "--hidden-import", "argon2",
             "--distpath", "dist",
             "--workpath", "build",
