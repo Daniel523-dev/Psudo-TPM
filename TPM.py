@@ -1,4 +1,4 @@
-import os, pickle, struct, ctypes, win32file, win32pipe, pywintypes, Encryption, traceback, time
+import os, pickle, struct, ctypes, Encryption, traceback, time, win32file, win32pipe, pywintypes
 try:import zstandard as zstd
 except:zstd=None
 from pathlib import Path
@@ -16,7 +16,6 @@ class TPMHardwareCrypto:
     MAGIC = b"TPMDP1"
     class DATA_BLOB(ctypes.Structure):_fields_ = [("cbData", ctypes.c_uint32), ("pbData", ctypes.POINTER(ctypes.c_ubyte)), ]
     def __init__(self, tpm_dir:Path):
-        if os.name != "nt":raise RuntimeError("Windows DPAPI is required")
         self.tpm_dir = Path(tpm_dir)
         self.tpm_dir.mkdir(parents=True, exist_ok=True)
         self.key_file = self.tpm_dir / "storage_key.bin"
